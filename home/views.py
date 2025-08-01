@@ -25,7 +25,7 @@ def index(request):
             expense_type=expense_type,
             description=description
         )
-        return redirect('index')
+        return redirect('/')
     
     credit = TrackingHistory.objects.filter(expense_type='CREDIT', created_at__month=now().month)
     debit = TrackingHistory.objects.filter(expense_type='DEBIT', created_at__month=now().month)
@@ -47,3 +47,20 @@ def index(request):
     }
 
     return render(request, 'index.html', context)
+
+def delete(request, id):
+    history = TrackingHistory.objects.filter(id=id)
+    
+    if history.exists():
+        balance,_= CurrentBalance.objects.get_or_create(id=1)
+        if history[0].expense_type == 'DEBIT':
+            balance.current_bal += float(history[0].amount)
+        else:
+            balance.current_bal -= float(history[0].amount)
+        balance.save()
+    history.delete()
+    
+    return redirect('/')
+
+def edit(request,id):
+    
