@@ -1,5 +1,6 @@
 from django.shortcuts import render,redirect
 from .models import *
+from .forms import *
 from django.utils.timezone import now
 
 # Create your views here.
@@ -63,4 +64,29 @@ def delete(request, id):
     return redirect('/')
 
 def edit(request,id):
-    
+    transaction = TrackingHistory.objects.filter(id=id)
+    balance,_ = CurrentBalance.objects.get_or_create(id=1)
+    old_amount = float(transaction[0].amount)
+    old_type = transaction[0].expense_type
+
+    if request.method == 'POST':
+        form = EditForm(request.POST,instance=transaction[0])
+        if form.is_valid():
+            form.save()
+
+            if old_type == 'DEBIT':
+                balance.current_bal += old_amount
+            else:
+                balance.current_bal -= old_amount
+
+            if transaction[0].expense_type == 'DEBIT':
+                balance.current_bal -= float(transaction[0].amount)
+            else:
+                balance.current_bal += float(transaction[0].amount)
+
+            balance.save()
+            return redirect('index')
+    else:
+        form = EditForm(instance=transaction[0])
+
+    return render(request,'edit.html',{'form':form})
