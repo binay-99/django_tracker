@@ -1,10 +1,65 @@
 from django.shortcuts import render,redirect
-from .models import *
-from .forms import *
+from .models import TrackingHistory,CurrentBalance
+from .forms import EditForm
 from django.utils.timezone import now
+from django.contrib import messages
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate,login, logout
+from django.contrib.auth.decorators import login_required
 
 # Create your views here.
 
+def register_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password1 = request.POST.get('password1')
+        password2 = request.POST.get('password2')
+        if password1 != password2:
+            messages.success(request, 'Passwords do not match')
+            return redirect('/register/')
+        
+        user = User.objects.filter(username = username)
+        if user.exists():
+            messages.success(request, 'Username already taken')
+            return redirect('/register/')
+        
+        user = User.objects.create(
+            username=username,
+            email=email
+        )
+        user.set_password(password1)
+        user.save()
+        messages.success(request, 'Account created')
+        return redirect('/index/')
+        
+    return render(request,'register.html')
+
+def login_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = User.objects.filter(username=username)
+        if not user.exists():
+            messages.success(request,'Username not found')
+            return redirect('/login/')
+        
+        user = authenticate(username=username, password=password)
+        if not user:
+            messages.success(request,"Incorrect password")
+            return redirect('/login/')
+        
+        login(request,user)
+        return redirect('/index/')
+    
+    return render(request,'login.html')
+
+def logout_view(request):
+    logout(request)
+    return redirect('/login/')
+
+@login_required(login_url='login')
 def index(request):
     balance,_= CurrentBalance.objects.get_or_create(id=1)
     history = TrackingHistory.objects.filter(created_at__month=now().month).order_by('-created_at')
