@@ -31,7 +31,7 @@ def register_view(request):
         user.set_password(password1)
         user.save()
         messages.success(request, 'Account created')
-        return redirect('/index/')
+        return redirect('/')
         
     return render(request,'register.html')
 
@@ -51,7 +51,7 @@ def login_view(request):
             return redirect('/login/')
         
         login(request,user)
-        return redirect('/index/')
+        return redirect('/')
     
     return render(request,'login.html')
 
@@ -61,8 +61,8 @@ def logout_view(request):
 
 @login_required(login_url='login')
 def index(request):
-    balance,_= CurrentBalance.objects.get_or_create(id=1)
-    history = TrackingHistory.objects.filter(created_at__month=now().month).order_by('-created_at')
+    balance,_= CurrentBalance.objects.get_or_create(user = request.user)
+    history = TrackingHistory.objects.filter(current_balance__user=request.user, created_at__month=now().month).order_by('-created_at')
 
     if request.method == 'POST':
         description = request.POST.get('description')
@@ -83,8 +83,8 @@ def index(request):
         )
         return redirect('/')
     
-    credit = TrackingHistory.objects.filter(expense_type='CREDIT', created_at__month=now().month)
-    debit = TrackingHistory.objects.filter(expense_type='DEBIT', created_at__month=now().month)
+    credit = TrackingHistory.objects.filter(current_balance__user=request.user,expense_type='CREDIT', created_at__month=now().month)
+    debit = TrackingHistory.objects.filter(current_balance__user=request.user,expense_type='DEBIT', created_at__month=now().month)
     monthly_expense = sum(i.amount for i in debit)
     monthly_income = sum(i.amount for i in credit)
 
@@ -108,7 +108,7 @@ def delete(request, id):
     history = TrackingHistory.objects.filter(id=id)
     
     if history.exists():
-        balance,_= CurrentBalance.objects.get_or_create(id=1)
+        balance,_= CurrentBalance.objects.get_or_create(user=request.user)
         if history[0].expense_type == 'DEBIT':
             balance.current_bal += float(history[0].amount)
         else:
@@ -120,7 +120,7 @@ def delete(request, id):
 
 def edit(request,id):
     transaction = TrackingHistory.objects.filter(id=id)
-    balance,_ = CurrentBalance.objects.get_or_create(id=1)
+    balance,_ = CurrentBalance.objects.get_or_create(user=request.user)
     old_amount = float(transaction[0].amount)
     old_type = transaction[0].expense_type
 
