@@ -104,6 +104,7 @@ def index(request):
 
     return render(request, 'index.html', context)
 
+@login_required(login_url='login')
 def delete(request, id):
     history = TrackingHistory.objects.filter(id=id)
     
@@ -118,6 +119,7 @@ def delete(request, id):
     
     return redirect('/')
 
+@login_required(login_url='login')
 def edit(request,id):
     transaction = TrackingHistory.objects.filter(id=id)
     balance,_ = CurrentBalance.objects.get_or_create(user=request.user)
